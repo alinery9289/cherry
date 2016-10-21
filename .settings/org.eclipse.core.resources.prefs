@@ -1,0 +1,13 @@
+eclipse.preferences.version=1
+encoding//cherry/jobs/__init__.py=utf-8
+encoding//cherry/jobs/job_tracker.py=utf-8
+encoding//cherry/tasks/__init__.py=utf-8
+encoding//cherry/tasks/basic_module.py=utf-8
+encoding//cherry/tasks/filters.py=utf-8
+encoding//cherry/tasks/task_tracker.py=utf-8
+encoding//cherry/util/MyConfig.py=utf-8
+encoding//cherry/util/MyExceptions.py=utf-8
+encoding//cherry/util/MyRoam.py=utf-8
+encoding//cherry/util/MyTemplate.py=utf-8
+encoding//cherry/util/__init__.py=utf-8
+encoding//cherry/util/ftptool.py=utf-8
