@@ -40,7 +40,7 @@ def task_load(to_uploader_para_in_str):
 
 def generate_filter_task():
     task_dict = {}
-    global filters_dict    
+    global filters_dict
 
     for filter_name in filters_dict:
 
@@ -51,7 +51,7 @@ def generate_filter_task():
         task_dict[filter_name] = filter_task
 
     return task_dict
-        
+
 task_dict = generate_filter_task()
 
 

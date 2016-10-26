@@ -8,7 +8,7 @@ date:2016/10/14
 from __future__ import absolute_import
 
 import json
-import os 
+import os
 # import logging.handlers
 import redis
 import hashlib
@@ -25,25 +25,25 @@ from cherry.util.logtool import Pro_log_main
 
 # log_path = os.getenv('DISTRIBUTED_TRANSCODER_LOG')
 # LOG_FILE = log_path + '\\' + 'log.log'
-# 
+#
 # handler = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes = 1024*1024, backupCount = 5) # init a handler instance
-# 
-# fmt = '%(asctime)s - %(filename)s:%(lineno)s - %(funcName)s - %(message)s'  
-# formatter = logging.Formatter(fmt)           # init a formatter instance  
+#
+# fmt = '%(asctime)s - %(filename)s:%(lineno)s - %(funcName)s - %(message)s'
+# formatter = logging.Formatter(fmt)           # init a formatter instance
 # handler.setFormatter(formatter)              # register formatter
-#   
+#
 # logger = logging.getLogger('log')    # get logger named 'log'
 # logger.setLevel(logging.DEBUG)
 # logger.addHandler(handler)                   # register handler
 
 
 # @singleton deocorator
-class Singleton(object):   
-    def __new__(cls, *args, **kw):   
-        if not hasattr(cls, '_instance'):   
+class Singleton(object):
+    def __new__(cls, *args, **kw):
+        if not hasattr(cls, '_instance'):
             orig = super(Singleton, cls)
-            cls._instance = orig.__new__(cls, *args, **kw)  
-        return cls._instance   
+            cls._instance = orig.__new__(cls, *args, **kw)
+        return cls._instance
 
 class base_module(object):
     def __init__(self):
@@ -52,12 +52,12 @@ class base_module(object):
         self.roam_path = os.getenv('DISTRIBUTED_TRANSCODER_ROAM')
         if not os.path.exists(self.roam_path):
             raise IOError('Could not open roam directory')
-        
-        # read conf file      
+
+        # read conf file
         self.redis_IP = conf_dict['redis']['ip']
         self.redis_port = conf_dict['redis']['port']
         self.redis_connection = redis.Redis(host=self.redis_IP, port = self.redis_port, db = 0)
-        
+
         self.ftp_hostaddr = conf_dict['ftp']['hostaddr']
         self.ftp_port = conf_dict['ftp']['port']
         self.ftp_username =  conf_dict['ftp']['username']
@@ -65,20 +65,20 @@ class base_module(object):
         self.rootdir_remote =  conf_dict['ftp']['rootdir_remote']
         self.ftp_connection = MYFTP(self.ftp_hostaddr, self.ftp_username, self.ftp_password, self.rootdir_remote, self.ftp_port)
         self.transfer_method = conf_dict['all']['transfer_method']
-        
+
         if (self.transfer_method == 'redis'):
             self.download_file = self.redis_download_file
             self.upload_file = self.redis_upload_file
-            
+
         elif (self.transfer_method == 'ftp'):
             self.download_file = self.ftp_download_file
-            self.upload_file = self.ftp_upload_file 
-            
+            self.upload_file = self.ftp_upload_file
+
         else:
             raise ValueError('could not recognise transfer_method: %s'%self.transfer_method)
 
         # get logger handler
-#         self.logger = logging.getLogger('log') 
+#         self.logger = logging.getLogger('log')
 
     def redis_get(self, redis_key):
         return self.redis_connection.get(redis_key)
@@ -90,8 +90,8 @@ class base_module(object):
         return self.redis_connection.delete(key)
 
     def redis_is_exist(self, key):
-        return self.redis_connection.exists(key)     
-    
+        return self.redis_connection.exists(key)
+
     def redis_download_file(self, key, local_name):
         data = self.redis_get(key)
         with open(local_name, 'wb') as f:
@@ -100,17 +100,17 @@ class base_module(object):
     def redis_upload_file(self, key, local_name):
         with open(local_name,'rb') as f:
             data = f.read()
-            self.redis_set(key, data)     
-            
+            self.redis_set(key, data)
+
     def ftp_download_file(self, remote_name, local_name): #remote_name: /xxx/xxx.video local_name: before.video
         print 'local_name:'+ local_name
         self.ftp_connection.login()
         self.ftp_connection.download_file(local_name,remote_name)
-    
-    def ftp_upload_file(self, remote_name, local_name): #remote_name: /xxx/xxx.video local_name: after.video 
+
+    def ftp_upload_file(self, remote_name, local_name): #remote_name: /xxx/xxx.video local_name: after.video
         print 'local_name:'+ local_name
         self.ftp_connection.login()
-        self.ftp_connection.upload_file(local_name,remote_name)    
+        self.ftp_connection.upload_file(local_name,remote_name)
 
     def ask_for_a_new_process_task_ID(self):
         md5_generator = hashlib.md5()
@@ -158,10 +158,10 @@ class base_filter(base_module, Singleton):
             # write log
             main_log = Pro_log_main()
             main_log.info("Begin to download task from job tracker, taskid is "+process_task_ID+".")
-            
+
             # download the segment need to be transcoded
             self.download_file(src, self.before_name)
-            
+
             main_log.info("Begin to process task, taskid is "+process_task_ID+".")
             # do the filter process the segment with FFmpeg
             self.filter_foo(process_task_ID, filter_parameter)
@@ -170,7 +170,7 @@ class base_filter(base_module, Singleton):
             main_log.info("Begin to upload task to job tracker, taskid is "+process_task_ID+".")
             # upload the transcoded segment
             self.upload_file(src, self.after_name)
-            
+
             main_log.info("Upload task to job tracker ok, taskid is "+process_task_ID+".")
             return to_filter_para_in_str
 
@@ -178,14 +178,14 @@ class uploader(base_module, Singleton):
     def __init__(self):
         super(uploader, self).__init__()
         # self.logger.log('start upload !!')
-    
+
     def upload(self, to_uploader_para_in_str):
         to_uploader_para_in_json = json.loads(to_uploader_para_in_str)
-        process_task_ID = to_uploader_para_in_json['process_task_ID'] 
+        process_task_ID = to_uploader_para_in_json['process_task_ID']
         data_key = process_task_ID + '.' + to_uploader_para_in_json['segment_file_name'] + '.data'
         file_name = self.roam_path + '\\' + process_task_ID + '\\before\\' + to_uploader_para_in_json['segment_file_name']
-            
-        
+
+
         self.upload_file(data_key, file_name)
             # self.dump_to_storage(return_key, json.dumps({'filters':None}))
 
@@ -193,9 +193,9 @@ class uploader(base_module, Singleton):
         # to_uploader_para_in_json['return_key'] = return_key
         # self.logger.log('upload success task_ID:%s!! ' % process_task_ID)
         return json.dumps(to_uploader_para_in_json)
-        
+
 class downloader(base_module, Singleton):
-    
+
     def __init__(self):
         super(downloader,self).__init__()
         # self.logger.log('start download!!')
@@ -210,7 +210,7 @@ class downloader(base_module, Singleton):
         # return_file_name = self.roam_path + '\\' + process_task_ID + '\\after\\return\\' + to_downloader_parameter_in_json['segment_file_name']
         self.download_file(data_key, data_file_name)
         # self.download_file(return_key, return_file_name)
-        
+
         self.redis_del(data_key)
         # self.redis_del(return_key)
 
@@ -240,7 +240,7 @@ class slicer(base_module, Singleton):
     def slice(self, to_slicer_para_in_str):
         task_ID = self.ask_for_a_new_process_task_ID()
         self.redis_set(task_ID, 'in progress')
-        with MyRoam.temporary_env(self.roam_path, director_given_name = task_ID, generate_hash_dir = True, del_roam_data = False): 
+        with MyRoam.temporary_env(self.roam_path, director_given_name = task_ID, generate_hash_dir = True, del_roam_data = False):
             os.mkdir('before')
             os.mkdir('after')
             os.chdir('after')
@@ -259,7 +259,7 @@ class slicer(base_module, Singleton):
 
             to_uploader_para_in_str = map(json.dumps, to_uploader_para_in_json)
             return to_uploader_para_in_str
-            
+
 class merger(base_module):
     def __init__(self):
         super(merger, self).__init__()
@@ -276,7 +276,7 @@ class merger(base_module):
         segments = os.listdir(os.getcwd())
         if len(segments) == 0:
             raise InternalError('segments_num is not right')
-        segments = sorted(segments, key = self.__index_of_segment)    
+        segments = sorted(segments, key = self.__index_of_segment)
         s = 'MP4Box '
         for segment in segments:
             s += '-cat ' + segment + ' '
@@ -291,7 +291,7 @@ class merger(base_module):
         roam_path = to_merger_parameter_in_json['data_file_name']
         output_file_path = to_merger_parameter_in_json['output_file_path']
         task_ID = to_merger_parameter_in_json['process_task_ID']
-        with MyRoam.temporary_env(root_path = roam_path, director_given_name = task_ID, generate_hash_dir = False, del_roam_data = False): 
+        with MyRoam.temporary_env(root_path = roam_path, director_given_name = task_ID, generate_hash_dir = False, del_roam_data = False):
             self.__execute_MP4Box(output_file_path)
 
         os.system('rd /q /s ' + self.roam_path + '\\' + task_ID)
@@ -299,11 +299,11 @@ class merger(base_module):
 class loader(base_module, Singleton):
     def __init__(self):
         super(loader, self).__init__()
-    
+
     def load(self, to_loader_para_in_str):
         task_ID = self.ask_for_a_new_process_task_ID()
         self.redis_set(task_ID, 'in progress')
-        with MyRoam.temporary_env(self.roam_path, director_given_name = task_ID, generate_hash_dir = True, del_roam_data = False) as roam_context: 
+        with MyRoam.temporary_env(self.roam_path, director_given_name = task_ID, generate_hash_dir = True, del_roam_data = False) as roam_context:
             os.mkdir('before')
             os.mkdir('after')
             os.chdir('after')

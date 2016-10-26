@@ -27,8 +27,8 @@ Cherry_App.conf.update(
         Queue('Cherry_Task_Group1', Exchange('Task'), routing_key='Cherry.Task.Group1'),
         Queue('Cherry_Job', Exchange('Job'), routing_key='Cherry.Job'),
     ),
-    CELERY_ROUTES = {  
-                     "Cherry.Task.tem_transcoder": {"exchange": "Task", "routing_key": "Cherry.Task.Group1"},                   
+    CELERY_ROUTES = {
+                     "Cherry.Task.tem_transcoder": {"exchange": "Task", "routing_key": "Cherry.Task.Group1"},
 #                     "Cherry.Task.sync_transcoder": {"exchange": "Task", "routing_key": "Cherry.Task.Group1"},
                      "Cherry.Task.Job_tracker":{"exchange": "Job", "routing_key": "Cherry.Job"}}
 

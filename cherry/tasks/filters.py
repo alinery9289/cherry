@@ -19,7 +19,7 @@ from cherry.util.logtool import Pro_log
 
 # transcode with ffmpeg
 class sync_transcoder(base_filter):
-    
+
     def __init__(self):
         super(sync_transcoder, self).__init__()
 
@@ -35,7 +35,7 @@ class sync_transcoder(base_filter):
         self.before_name
         self.after_name
 
-        
+
         s = 'ffmpeg -i %s -c:v %s -b:v %s -c:a copy -s %s %s' % (self.before_name, \
             codec_parameter['codec'], codec_parameter['bitrate'], codec_parameter['resolution'], self.after_name)
         ret = os.system(s)
@@ -44,7 +44,7 @@ class sync_transcoder(base_filter):
 
 
 class tem_transcoder(base_filter):
-    
+
     def __init__(self):
         super(tem_transcoder, self).__init__()
 
@@ -65,7 +65,7 @@ class tem_transcoder(base_filter):
         bat_file_name = tem_instance.generate_bat('hevc_bat_template.bat', bat_file_tmp_param)
         #download file and process and upload result
         process2 = subprocess.Popen(bat_file_name, shell=True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT,universal_newlines= True)
-        
+
 #         one_status = Pro_status()
         one_log = Pro_log(process_task_ID)
         while True:
@@ -74,11 +74,11 @@ class tem_transcoder(base_filter):
             one_log.debug(line)
             if not line:
                 break
-        
-        
+
+
 
 class blank_filter(base_filter):
-    
+
     def __init__(self):
         super(blank_filter, self).__init__()
 

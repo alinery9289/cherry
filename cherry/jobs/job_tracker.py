@@ -30,7 +30,7 @@ group代替轮询的方式，会是一个比较优雅的做法。
     #     async_r.append(task_dict['task_upload'].s(segment))
     # g = group(*async_r)
     # pdb.set_trace()
-    
+
 
 # except Exception, e:
 #     pdb.set_trace()
@@ -40,7 +40,7 @@ group代替轮询的方式，会是一个比较优雅的做法。
 
 @Cherry_App.task(name='Cherry.Task.Job_tracker')
 def execute_quick_job(to_slicer_in_str):
-    
+
     # generate filter chain
     filters = to_slicer_in_str['filters'].keys()
     filter_chain = []
@@ -55,7 +55,7 @@ def execute_quick_job(to_slicer_in_str):
         ret = task_dict['task_upload'](segment)
         subtasks.append(filter_chain_s(ret))
 
-    
+
     rets= []
     while len(subtasks) != 0:
         del_list = []
@@ -73,8 +73,8 @@ def execute_quick_job(to_slicer_in_str):
         print len(rets)
 
     ret = task_dict['task_merge'](rets)
-    
-    
+
+
 def execute_normal_job(message_in_str):
     # generate filter chain
     filters = message_in_str['filters'].keys()
@@ -86,10 +86,10 @@ def execute_normal_job(message_in_str):
     upload_ret = task_dict['task_upload'](load_ret)
     process_ret = task_dict[filters[0]](upload_ret)
 #     filter_chain_s.apply_async(to_filter_para_in_str = upload_ret)
-    
+
 #     while task.successful()==False:
 #         time.sleep(0.5)
 #         print "now processing"
-#     
+#
 #     res = task.get()
     task_dict['task_download'](process_ret)
