@@ -12,7 +12,7 @@ rabbitmq_port = conf_dict['rabbitmq']['port']
 
 broker_str = 'amqp://' + rabbitmq_user + ':' + rabbitmq_password + '@' + rabbitmq_IP + ':' + rabbitmq_port
 backend_str = 'amqp://' + rabbitmq_user + ':' + rabbitmq_password + '@' + rabbitmq_IP + ':' + rabbitmq_port
-Cherry_App = Celery('Cherry',
+celery_app = Celery('Cherry',
                      broker = broker_str,
                      backend = backend_str,
                      include=['cherry.tasks.task_tracker','cherry.jobs.job_tracker'])
@@ -22,7 +22,7 @@ Cherry_App = Celery('Cherry',
 # Group1_route_info = {"exchange": "Task", "routing_key": "Cherry.Group1"}
 # Job_route_info = {"exchange": "Job", "routing_key": "Cherry.Job"}
 
-Cherry_App.conf.update(
+celery_app.conf.update(
     CELERY_QUEUES = (
         Queue('Cherry_Task_Group1', Exchange('Task'), routing_key='Cherry.Task.Group1'),
         Queue('Cherry_Job', Exchange('Job'), routing_key='Cherry.Job'),
@@ -38,4 +38,4 @@ Cherry_App.conf.update(
 )
 
 if __name__ == '__main__':
-    Cherry_App.start()
+    celery_app.start()

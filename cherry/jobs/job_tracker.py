@@ -38,6 +38,7 @@ group代替轮询的方式，会是一个比较优雅的做法。
 # task = group(chain(filter_chain_s(segment)) for segment in segments)
 '''
 
+
 @Cherry_App.task(name='Cherry.Task.Job_tracker')
 def execute_quick_job(to_slicer_in_str):
 
@@ -55,8 +56,7 @@ def execute_quick_job(to_slicer_in_str):
         ret = task_dict['task_upload'](segment)
         subtasks.append(filter_chain_s(ret))
 
-
-    rets= []
+    rets = []
     while len(subtasks) != 0:
         del_list = []
         for i in range(len(subtasks)):
@@ -94,4 +94,4 @@ def execute_normal_job(job):
 #         print "now processing"
 #
 #     res = task.get()
-    task_dict['task_download'](process_ret)
+    task

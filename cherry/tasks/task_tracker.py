@@ -11,32 +11,39 @@ from __future__ import absolute_import
 from cherry.tasks.filters import filters_dict
 # from cherry.tasks.filters import (sync_transcoder, blank_filter)
 
-from cherry.tasks.basic_module import (slicer, downloader, uploader, merger, loader)
+from cherry.tasks.basic_module import (
+    Slicer, Downloader, Uploader, Merger, Loader)
 
 from cherry.celery import Cherry_App
 
 # upload,slice,download,merge直接由job_traker调用
 # celery的异步任务只有filter类
 
+
 def task_upload(to_uploader_para_in_str):
     uploader_instance = uploader()
     return uploader_instance.upload(to_uploader_para_in_str)
 
+
 def task_slice(to_slicer_para_in_str):
-    slicer_ins = slicer()
+    slicer_ins = Slicer()
     return slicer_ins.slice(to_slicer_para_in_str)
 
+
 def task_download(to_downloader_para_in_str):
-    downloader_instance = downloader()
+    downloader_instance = Downloader()
     return downloader_instance.download(to_downloader_para_in_str)
 
+
 def task_merge(to_merger_para_in_str):
-    merger_instance = merger()
+    merger_instance = Merger()
     return merger_instance.merge(to_merger_para_in_str)
 
+
 def task_load(to_uploader_para_in_str):
-    loader_instance = loader()
+    loader_instance = Loader()
     return loader_instance.load(to_uploader_para_in_str)
+
 
 def generate_filter_task():
     task_dict = {}
@@ -47,7 +54,8 @@ def generate_filter_task():
         @Cherry_App.task(name='Cherry.Task.' + filter_name)
         def filter_task(to_filter_para_in_str):
             anonymity_filter_instance = filters_dict[filter_name]()
-            return anonymity_filter_instance.do_process_main(to_filter_para_in_str)
+            return anonymity_filter_instance.do_process_main(
+                                                             to_filter_para_in_str)
         task_dict[filter_name] = filter_task
 
     return task_dict
