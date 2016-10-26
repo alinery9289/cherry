@@ -5,10 +5,14 @@ author: huodahaha, zhangxusheng
 date:2016/10/21
 '''
 from __future__ import absolute_import
+
+import time
+import json
+
 from cherry.tasks.task_tracker import task_dict
 from cherry.celery import Cherry_App
 from celery import chain, group, chord
-import time
+
 
 '''
 这里使用了轮询的方式，而非celery内置的group或者chord，是因为group使用一直出现bug，如果能使用
@@ -74,14 +78,18 @@ def execute_quick_job(to_slicer_in_str):
 def execute_normal_job(message_in_str):
     # generate filter chain
     filters = message_in_str['filters'].keys()
-    filter_chain = []
-    for filter_name in filters:
-        filter_chain.append(task_dict[filter_name].s())
-    filter_chain_s = chain(filter_chain)
+#     filter_chain = []
+#     for filter_name in filters:
+#         filter_chain.append(task_dict[filter_name].s())
+#     filter_chain_s = chain(filter_chain)
+    load_ret = task_dict['task_load'](json.dumps(message_in_str))
+    upload_ret = task_dict['task_upload'](load_ret)
+    process_ret = task_dict[filters[0]](upload_ret)
+#     filter_chain_s.apply_async(to_filter_para_in_str = upload_ret)
     
-    task = filter_chain_s()
-    
-    while task.successful()==False:
-        res = task.get()
-        task_dict['task_download'](res)
-        time.sleep(0.2)
+#     while task.successful()==False:
+#         time.sleep(0.5)
+#         print "now processing"
+#     
+#     res = task.get()
+    task_dict['task_download'](process_ret)

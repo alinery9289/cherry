@@ -9,11 +9,9 @@ from __future__ import absolute_import
 
 
 from cherry.tasks.filters import filters_dict
-from cherry.tasks.filters import (sync_transcoder, blank_filter)
+# from cherry.tasks.filters import (sync_transcoder, blank_filter)
 
-from cherry.tasks.basic_module import (slicer, downloader, uploader, merger)
-
-from celery import Celery
+from cherry.tasks.basic_module import (slicer, downloader, uploader, merger, loader)
 
 from cherry.celery import Cherry_App
 
@@ -35,6 +33,10 @@ def task_download(to_downloader_para_in_str):
 def task_merge(to_merger_para_in_str):
     merger_instance = merger()
     return merger_instance.merge(to_merger_para_in_str)
+
+def task_load(to_uploader_para_in_str):
+    loader_instance = loader()
+    return loader_instance.load(to_uploader_para_in_str)
 
 def generate_filter_task():
     task_dict = {}
@@ -78,3 +80,4 @@ task_dict['task_slice'] = task_slice
 task_dict['task_merge'] = task_merge
 task_dict['task_upload'] = task_upload
 task_dict['task_download'] = task_download
+task_dict['task_load'] = task_load

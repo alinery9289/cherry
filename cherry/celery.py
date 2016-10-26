@@ -24,12 +24,12 @@ Cherry_App = Celery('Cherry',
 
 Cherry_App.conf.update(
     CELERY_QUEUES = (
-        Queue('Cherry_Task_Group1', Exchange('Task'), routing_key='Cherry.Group1'),
+        Queue('Cherry_Task_Group1', Exchange('Task'), routing_key='Cherry.Task.Group1'),
         Queue('Cherry_Job', Exchange('Job'), routing_key='Cherry.Job'),
     ),
-    CELERY_ROUTES = {                     
-                     "Cherry.Task.sync_transcoder": {"exchange": "Task", "routing_key": "Cherry.Group1"},
-                     "Cherry.Task.blank_filter": {"exchange": "Task", "routing_key": "Cherry.Group1"},
+    CELERY_ROUTES = {  
+                     "Cherry.Task.tem_transcoder": {"exchange": "Task", "routing_key": "Cherry.Task.Group1"},                   
+#                     "Cherry.Task.sync_transcoder": {"exchange": "Task", "routing_key": "Cherry.Task.Group1"},
                      "Cherry.Task.Job_tracker":{"exchange": "Job", "routing_key": "Cherry.Job"}}
 
     # CELERY_DEFAULT_EXCHANGE = 'Cherry.TaskGroup_1',
