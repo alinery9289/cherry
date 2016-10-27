@@ -1,6 +1,6 @@
 # encoding : utf-8
 from sqlalchemy import create_engine
-from cherry.util.MyConfig import conf_dict
+from cherry.util.config import conf_dict
 from sqlalchemy.sql.sqltypes import BigInteger
 
 engine_info = "mysql+mysqldb://"+conf_dict['mysql']['username']+":"+conf_dict[

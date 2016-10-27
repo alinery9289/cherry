@@ -40,7 +40,7 @@ class FilterBase(ModuleBase, Singleton):
 
     def do_process_main(self, to_filter_para_in_str):
         print self.filter_name
-        with MyRoam.temporary_env(self.roam_path):
+        with MyRoam.TmpEnv(self.roam_path):
             # check the parameter passed by the upper layer
             filter_parameter, src, process_task_ID = self._parameter_decode(
                 to_filter_para_in_str)

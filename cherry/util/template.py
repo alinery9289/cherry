@@ -11,17 +11,17 @@ import os
 import jinja2
 
 from cherry.tasks.basic_module import Singleton
-from cherry.util.MyConfig import conf_dict
-
-# generate a template bat
+from cherry.util.config import conf_dict
 
 
-class template(Singleton):
+class Template(Singleton):
+    """ generate a template bat
+    """
 
     def __init__(self):
         super(template, self).__init__()
 
-        # update filtera name
+        # update filter name
         self.template_env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(
                 conf_dict['all']['template_path']))

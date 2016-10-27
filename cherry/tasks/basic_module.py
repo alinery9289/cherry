@@ -200,7 +200,7 @@ class Slicer(ModuleBase, Singleton):
     def slice(self, params_str):
         task_id = self.generate_task_id()
         self.redis_set(task_id, 'in progress')
-        with MyRoam.temporary_env(self.roam_path, director_given_name=task_id, generate_hash_dir=True, del_roam_data=False):
+        with MyRoam.TmpEnv(self.roam_path, director_given_name=task_id, generate_hash_dir=True, del_roam_data=False):
             os.mkdir('before')
             os.mkdir('after')
             os.chdir('after')
@@ -258,7 +258,7 @@ class Merger(ModuleBase):
         roam_path = params_json['data_file_name']
         output_file_path = params_json['output_file_path']
         task_id = params_json['process_task_id']
-        with MyRoam.temporary_env(root_path=roam_path,
+        with MyRoam.TmpEnv(root_path=roam_path,
                                   director_given_name=task_id,
                                   generate_hash_dir=False,
                                   del_roam_data=False):
@@ -275,7 +275,7 @@ class Loader(ModuleBase, Singleton):
     def load(self, params_str):
         task_id = self.generate_task_id()
         self.redis_set(task_id, 'in progress')
-        with MyRoam.temporary_env(self.roam_path,
+        with MyRoam.TmpEnv(self.roam_path,
                                   director_given_name=task_id,
                                   generate_hash_dir=True,
                                   del_roam_data=False) as roam_context:
