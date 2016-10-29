@@ -1,5 +1,6 @@
 """
-filters module
+filters.py
+
 author: huodahaha, zhangxusheng, Yanan Zhao
 date:2015/11/12
 email:huodahaha@gmail.com
@@ -8,19 +9,17 @@ from __future__ import absolute_import
 
 
 import os
-import json 
+import sys
 import subprocess
+import json
 
-
-from cherry.tasks.basic_module import ModuleBase, Singleton
-from cherry.util.roam import TmpEnv
 from cherry.util.exceptions import FFmpegExecuteError
 from cherry.util.template import Template
-from cherry.util.redistool import Pro_status
-from cherry.util.logtool import Pro_log_main,Pro_log
+from cherry.util import roam
+from cherry.tasks.operators import Operator, Singleton
 
 
-class FilterBase(ModuleBase, Singleton):
+class FilterBase(Operator, Singleton):
 
     def __init__(self):
         super(FilterBase, self).__init__()
@@ -30,50 +29,37 @@ class FilterBase(ModuleBase, Singleton):
 
     def _parameter_decode(self, params_str):
         params_json = json.loads(params_str)
-        filter_parameter = params_json['filters'][self.filter_name]
+        filter_params = params_json['filters'][self.filter_name]
 
         data_key = params_json['data_key']
-        process_task_id = params_json['process_task_ID']
-        return filter_parameter, data_key, process_task_id
+        task_id = params_json['task_id']
+        return filter_params, data_key, task_id
 
     def get_filter_name(self):
         return self.__class__.__name__
 
-    def filter_foo(self, process_task_ID, filter_parameter):
+    def filter_foo(self, task_id, filter_params):
         pass
 
-    def do_process_main(self, to_filter_para_in_str):
-        print self.filter_name
-        with TmpEnv(self.roam_path):
-            # check the parameter passed by the upper layer
-            filter_parameter, src, process_task_ID = self._parameter_decode(
-                to_filter_para_in_str)
-
-            main_log = Pro_log_main()
-            main_log.info(
-                "Begin to download task from job tracker, taskid is " +
-                process_task_ID + ".")
+    def do_process_main(self, filter_params_str):
+        with roam.RoamCxt(self.roam_path):
+            filter_params, src, task_id = self._parameter_decode(
+                filter_params_str)
 
             # download the segment need to be transcoded
+            print("downloading task[%s] from job tracker" % task_id)
             self.download_file(src, self.before_name)
 
-            main_log.info(
-                "Begin to process task, taskid is " +
-                process_task_ID + ".")
             # do the filter process the segment with FFmpeg
-            self.filter_foo(process_task_ID, filter_parameter)
+            print("processing task[%s]" % task_id)
+            self.filter_foo(task_id, filter_params)
 
-            # write status
-            main_log.info(
-                "Begin to upload task to job tracker, taskid is " +
-                process_task_ID + ".")
             # upload the transcoded segment
+            print("uploading task[%s] to job tracker" % task_id)
             self.upload_file(src, self.after_name)
 
-            main_log.info(
-                "Upload task to job tracker ok, taskid is " +
-                process_task_ID + ".")
-            return to_filter_para_in_str
+            print("processing task[%s] done" % task_id)
+            return filter_params_str
 
 
 class SyncTranscoder(FilterBase):
@@ -111,32 +97,36 @@ class TemplateTranscoder(FilterBase):
         print "here:" + self.filter_name
 
     def filter_foo(self, task_id, codec_parameter):
-        print 'this is a template filter!!!'
-        self.before_name
-        self.after_name
+        print("filter_foo @ TemplateTranscoder")
 
-        # load the control file template,set the parameter
-        bat_file_tmp_param = {
-            'before_file_name': self.before_name,
-            'after_file_name': self.after_name}
-        bat_file_tmp_param.update(codec_parameter)
-        tem_instance = Template()
-        bat_file_name = tem_instance.generate_bat(
-            'hevc_bat_template.bat', bat_file_tmp_param)
-        # download file and process and upload result
-        process2 = subprocess.Popen(
-            bat_file_name,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True)
+        template_params = {'before_file_name': self.before_name,
+                           'after_file_name': self.after_name}
+        template_params.update(codec_parameter)
 
-        one_log = Pro_log(task_id)
+        if sys.platform.startswith('linux'):
+            template_file = 'hevc_template.sh'
+        else:  # windows
+            template_file = 'hevc_template.bat'
+
+        template = Template()
+        script = template.generate_bat(template_file, template_params)
+
+        # TODO: check whether this is ok on windows
+        script = os.path.join(os.getcwd(), script)
+        print("absolute path of script %s" % script)
+        process2 = subprocess.Popen(script,
+                                    shell=True,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    universal_newlines=True)
+
         while True:
             line = process2.stdout.readline()
-            one_log.debug(line)
+            print(line)
             if not line:
                 break
+
+        return template_params
 
 
 class BlankFilter(FilterBase):
@@ -150,4 +140,7 @@ class BlankFilter(FilterBase):
         print 'this is a blank filter!!!'
         pass
 
-filters_dict = {'TemplateTranscoder': TemplateTranscoder}
+
+# filters_dict = {'SyncTranscoder': SyncTranscoder,
+filters_dict = {'TemplateTranscoder': TemplateTranscoder,
+                'TemplateTranscoder': TemplateTranscoder}

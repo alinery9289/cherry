@@ -1,14 +1,18 @@
-# encoding : utf-8
 from sqlalchemy import create_engine
 from cherry.util.config import conf_dict
 from sqlalchemy.sql.sqltypes import BigInteger
 
-engine_info = "mysql+mysqldb://"+conf_dict['mysql']['username']+":"+conf_dict[
-    'mysql']['password']+"@"+conf_dict['mysql']['ip']+"/"+conf_dict['mysql']['db']
-engine = create_engine(engine_info)
-
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, INTEGER, CHAR, DATETIME
+
+db_username = conf_dict['mysql']['username']
+db_password = conf_dict['mysql']['password']
+db_host = conf_dict['mysql']['ip']
+db_db_name = conf_dict['mysql']['db']
+
+engine_info = "mysql+mysqldb://" + db_username + ":" + db_password + "@" + \
+    db_host + "/" + db_db_name
+engine = create_engine(engine_info)
 
 Base = declarative_base()
 
@@ -24,7 +28,7 @@ class User(Base):
     outdate = Column(DATETIME)
 
 
-class Media_File(Base):
+class MediaFile(Base):
     __tablename__ = 'h264tohevc_mediafile'
     fileid = Column(CHAR, primary_key=True, unique=True)
     filename = Column(CHAR)
@@ -41,7 +45,7 @@ class Media_File(Base):
             self.fileid, self.filename, self.authcode)
 
 
-class Web_Task(Base):
+class WebTask(Base):
     __tablename__ = 'h264tohevc_processlog'
     taskid = Column(CHAR, primary_key=True, unique=True)
     fileid = Column(CHAR)
@@ -58,7 +62,7 @@ class Web_Task(Base):
             self.taskid, self.dealtime, self.dealstate)
 
 
-class Task_Group(Base):
+class TaskGroup(Base):
     __tablename__ = 'h264tohevc_taskgroup'
     groupid = Column(INTEGER, primary_key=True, unique=True, autoincrement=True)
     tasklist = Column(CHAR)
@@ -84,7 +88,7 @@ def get_CELERY_ROUTES():
     Session = sessionmaker(bind=engine)
     session = Session()
     CELERY_ROUTES = {}
-    for instance in session.query(Task_Group):
+    for instance in session.query(TaskGroup):
         tasks = str(instance.tasklist).split(',')
         for task in tasks:
             one_task_message = {}
@@ -95,16 +99,13 @@ def get_CELERY_ROUTES():
 
     return CELERY_ROUTES
 
+
 if __name__ == '__main__':
     import datetime
     Session = sessionmaker(bind=engine)
     session = Session()
-#     oneFile = Media_File(fileid="d6d7a7c7b8b422321244",filename="haha.txt",authcode="d6d7a7c7b8b422321244",filesize=12132,\
-#                                      location= "D:/",filetype="mp4",uploadtime= datetime.datetime.now(),encodeinfo= "hahaha")
-#     print oneFile
-#     session.add(oneFile)
 
-    for instance in session.query(Media_File):
+    for instance in session.query(MediaFile):
         print instance
     oneusers = session.query(User).filter(
         User.authcode == "38a43f8070e811e5ad0c90b11c94ab4d")

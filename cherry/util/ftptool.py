@@ -1,7 +1,12 @@
 # coding=utf-8
 from __future__ import absolute_import
 from ftplib import FTP
+from ftplib import ftpcp
 import os
+import sys
+import string
+import datetime
+import time
 import socket
 # import cherry.util.MyConfig
 from cherry.util.config import conf_dict
@@ -35,7 +40,7 @@ class FtpClient:
             # print u'Begin to login %s' %(self.hostaddr)
             ftp.login(self.username, self.password)
             # print u'Login %s succeed' %(self.hostaddr)
-            print (ftp.getwelcome())
+            debug_print(ftp.getwelcome())
         except Exception:
             print u'Login failed'
         try:
@@ -52,7 +57,7 @@ class FtpClient:
         if not os.path.isfile(localfile):
             return
         if self.is_same_size(localfile, remotefile):
-            print (u'Skip %s' % localfile)
+            debug_print(u'Skip %s' % localfile)
             return
         file_handler = open(localfile, 'rb')
 
@@ -65,9 +70,10 @@ class FtpClient:
             self.ftp.cwd(now_dir)
         self.ftp.storbinary('STOR %s' % remotefile, file_handler)
         file_handler.close()
-        print (u'Have delivered %s' % localfile)
+        debug_print(u'Have delivered %s' % localfile)
 
     def get_file_list(self, line):
+        ret_arr = []
         file_arr = self.get_filename(line)
         if file_arr[1] not in ['.', '..']:
             self.file_list.append(file_arr)

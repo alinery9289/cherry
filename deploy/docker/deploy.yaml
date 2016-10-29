@@ -1,0 +1,6 @@
+ffmpeg:
+    image: ffmpeg_ubuntu16.04:2016.11.01
+    command: echo "helll, cherry" # sleep 1000d
+    volumes:
+        - /home/cloud/opensource/arthurchiao/cherry:/cherry
+        - /home/cloud/cherry:/cherry_run
