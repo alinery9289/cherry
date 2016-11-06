@@ -1,6 +1,9 @@
 *.pyc
 .venv
 
+#eclipse setting files
+.settings
+
 # ctags files
 tags
 TAGS

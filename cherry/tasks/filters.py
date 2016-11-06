@@ -72,7 +72,7 @@ class SyncTranscoder(FilterBase):
         self.filter_name = self.get_filter_name()
         print "here is:" + self.filter_name
 
-    def filter_foo(self, codec_parameter):
+    def filter_foo(self,task_id, codec_parameter):
         print 'this is a ffmpeg filter!!!'
 
         self.before_name
@@ -122,7 +122,7 @@ class TemplateTranscoder(FilterBase):
 
         while True:
             line = process2.stdout.readline()
-            print(line)
+#             print(line)
             if not line:
                 break
 
@@ -142,5 +142,4 @@ class BlankFilter(FilterBase):
 
 
 # filters_dict = {'SyncTranscoder': SyncTranscoder,
-filters_dict = {'TemplateTranscoder': TemplateTranscoder,
-                'TemplateTranscoder': TemplateTranscoder}
+filters_dict = {'TemplateTranscoder': TemplateTranscoder, 'SyncTranscoder':SyncTranscoder}

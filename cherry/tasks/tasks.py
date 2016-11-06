@@ -7,7 +7,7 @@ email:huodahaha@gmail.com
 '''
 from __future__ import absolute_import
 
-
+import sys
 from cherry.tasks.filters import filters_dict
 # from cherry.tasks.filters import (sync_transcoder, blank_filter)
 
@@ -44,15 +44,27 @@ def generate_filter_task():
     task_dict = {}
     global filters_dict
 
-    for filter_name in filters_dict:
+#     for filter_name in filters_dict:
+#         @celery_app.task(name='cherry.task.' + filter_name)
+#         def filter_task(filter_params):
+#             print("@filter_task: params %s" % filter_params)
+#             _filter = filters_dict[filter_name]()
+#             return _filter.do_process_main(filter_params)
+#         task_dict[filter_name] = filter_task
+# 
+#     return task_dict
 
-        @celery_app.task(name='cherry.task.' + filter_name)
-        def filter_task(filter_params):
-            print("@filter_task: params %s" % filter_params)
-            _filter = filters_dict[filter_name]()
-            return _filter.do_process_main(filter_params)
-        task_dict[filter_name] = filter_task
+    FUNC_TEMPLATE = "@celery_app.task(name='cherry.task.{func}')\ndef {func}(to_filter_para_in_str):\n\tprint sys._getframe().f_code.co_name\n\t"+\
+            "anonymity_filter_instance = filters_dict['{func}']()\n\treturn anonymity_filter_instance.do_process_main(to_filter_para_in_str)"
 
+    for fn in filters_dict:
+        exec(FUNC_TEMPLATE.format(func=fn))
+        
+    local_vars = dict(locals().items())
+    
+    for fn in filters_dict:
+        task_dict[fn] = local_vars[fn]
+        
     return task_dict
 
 task_dict = generate_filter_task()

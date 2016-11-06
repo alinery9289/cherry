@@ -49,7 +49,7 @@ group代替轮询的方式，会是一个比较优雅的做法。
 """
 
 
-@celery_app.task(name='cherry.task.job')
+@celery_app.task(name='cherry.task.sliced_job')
 def launch_quick_job(context):
     """launch jobs through celery
 
@@ -83,12 +83,12 @@ def launch_quick_job(context):
         for i in reversed(del_list):
             del subtasks[i]
 
-        time.sleep(0.2)
+        time.sleep(1)
         print len(cxts)
 
     context = task_dict['task_merge'](cxts)
 
-
+@celery_app.task(name='cherry.task.intact_job')
 def launch_normal_job(context):
     """
     context: json-serialized parameters of the job

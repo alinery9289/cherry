@@ -2,5 +2,6 @@
 
 set worker_name=worker1
 call .\set_env.cmd
-
-celery -A cherry worker --loglevel=info --pool=solo -n %worker_name% -Q Cherry_Task_Group1
+cd ../../
+celery -A cherry worker --loglevel=info --pool=solo -n %worker_name% -Q cherry_task_group1
+cd .\deploy\windows

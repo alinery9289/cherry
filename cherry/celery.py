@@ -28,8 +28,10 @@ celery_app.conf.update(
     ),
     CELERY_ROUTES = {
                      "cherry.task.TemplateTranscoder": {"exchange": "task", "routing_key": "cherry.task.group1"},
-                     # "Cherry.Task.SyncTranscoder": {"exchange": "Task", "routing_key": "Cherry.Task.Group1"},
-                     "cherry.task.job":{"exchange": "job", "routing_key": "cherry.job"}}
+                     "cherry.task.SyncTranscoder": {"exchange": "task", "routing_key": "cherry.task.group1"},
+                     "cherry.task.sliced_job":{"exchange": "job", "routing_key": "cherry.job"},
+                     "cherry.task.intact_job":{"exchange": "job", "routing_key": "cherry.job"},
+                     }
 
     # CELERY_DEFAULT_EXCHANGE = 'Cherry.TaskGroup_1',
     # CELERY_DEFAULT_EXCHANGE_TYPE = 'topic',

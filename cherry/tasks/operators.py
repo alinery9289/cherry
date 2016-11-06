@@ -120,7 +120,7 @@ class Operator(object):
 
     # remote_name: /xxx/xxx.video local_name: after.video
     def ftp_upload_file(self, remote_file, local_file):
-        print("upload file to ftp: (k,v) = (%s, %s)" % (key, local_file))
+        print("upload file to ftp: (k,v) = (%s, %s)" % (remote_file, local_file))
         self.ftp_connection.login()
         self.ftp_connection.upload_file(local_file, remote_file)
 
@@ -242,7 +242,7 @@ class Slicer(Operator, Singleton):
     def _do_segmentation(self, file_name):
         """segment input file in current directory (os.getcwd())
         """
-        cmd = "ffmpeg -i %s -f segment -segment_time 100 -c copy -map 0 " \
+        cmd = "ffmpeg -i %s -f segment -segment_time 15 -c copy -map 0 " \
             "segment%%d.mp4" % file_name
 
         ret = os.system(cmd)

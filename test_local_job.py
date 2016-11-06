@@ -11,14 +11,14 @@ if __name__ == '__main__':
 
         },
         # linux
-        'input_file_path': '/cherry-run/video_files/in.mp4',
-        'output_file_path': '/cherry-run/video_files/out.mp4'
+#         'input_file_path': '/cherry-run/video_files/in.mp4',
+#         'output_file_path': '/cherry-run/video_files/out.mp4'
         # 'input_file_path': '/home/cloud/cherry/video_files/in.mp4',
         # 'output_file_path': '/home/cloud/cherry/video_files/out.mp4'
 
         # windows
-        # 'input_file_path': r'D:\\Work\\distributed_transcoder\\cherry\\video_file\\in.mp4',
-        # 'output_file_path': r'D:\\Work\\distributed_transcoder\\cherry\\video_file\\out.mp4'
+        'input_file_path': r'D:\\Work\\distributed_transcoder\\cherry\\video_file\\in.mp4',
+        'output_file_path': r'D:\\Work\\distributed_transcoder\\cherry\\video_file\\out.mp4'
     }
 
     launch_normal_job(job)

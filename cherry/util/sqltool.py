@@ -81,36 +81,36 @@ class TaskGroup(Base):
 from sqlalchemy.orm import sessionmaker
 
 
-def get_CELERY_ROUTES():
+# def get_CELERY_ROUTES():
+# 
+#     # Base.metadata.create_all(engine)
+# 
+#     Session = sessionmaker(bind=engine)
+#     session = Session()
+#     CELERY_ROUTES = {}
+#     for instance in session.query(TaskGroup):
+#         tasks = str(instance.tasklist).split(',')
+#         for task in tasks:
+#             one_task_message = {}
+#             one_task_message[
+#                 "routing_key"] = "Cherry.Group"+str(instance.groupid)
+#             one_task_message["exchange"] = "Task"
+#             CELERY_ROUTES["Cherry.Task.task_"+task] = one_task_message
+# 
+#     return CELERY_ROUTES
 
-    # Base.metadata.create_all(engine)
 
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    CELERY_ROUTES = {}
-    for instance in session.query(TaskGroup):
-        tasks = str(instance.tasklist).split(',')
-        for task in tasks:
-            one_task_message = {}
-            one_task_message[
-                "routing_key"] = "Cherry.Group"+str(instance.groupid)
-            one_task_message["exchange"] = "Task"
-            CELERY_ROUTES["Cherry.Task.task_"+task] = one_task_message
-
-    return CELERY_ROUTES
-
-
-if __name__ == '__main__':
-    import datetime
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
-    for instance in session.query(MediaFile):
-        print instance
-    oneusers = session.query(User).filter(
-        User.authcode == "38a43f8070e811e5ad0c90b11c94ab4d")
-    for oneuser in oneusers:
-        now_storage = oneuser.userstorage - 2000
-    oneusers.update({User.userstorage: now_storage})
-    session.commit()
-    session.close()
+# if __name__ == '__main__':
+#     import datetime
+#     Session = sessionmaker(bind=engine)
+#     session = Session()
+# 
+#     for instance in session.query(MediaFile):
+#         print instance
+#     oneusers = session.query(User).filter(
+#         User.authcode == "38a43f8070e811e5ad0c90b11c94ab4d")
+#     for oneuser in oneusers:
+#         now_storage = oneuser.userstorage - 2000
+#     oneusers.update({User.userstorage: now_storage})
+#     session.commit()
+#     session.close()
