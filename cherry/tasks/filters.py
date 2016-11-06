@@ -64,12 +64,12 @@ class FilterBase(Operator, Singleton):
             return filter_params_str
 
 
-class SyncTranscoder(FilterBase):
+class SimpleTranscoder(FilterBase):
     """transcode with ffmpeg
     """
 
     def __init__(self):
-        super(SyncTranscoder, self).__init__()
+        super(SimpleTranscoder, self).__init__()
 
         self.filter_name = self.get_filter_name()
         print "here is:" + self.filter_name
@@ -142,5 +142,5 @@ class BlankFilter(FilterBase):
         pass
 
 
-# filters_dict = {'SyncTranscoder': SyncTranscoder,
-filters_dict = {'TemplateTranscoder': TemplateTranscoder, 'SyncTranscoder':SyncTranscoder}
+# filters_dict = {'SimpleTranscoder': SimpleTranscoder,
+filters_dict = {'TemplateTranscoder': TemplateTranscoder, 'SimpleTranscoder':SimpleTranscoder}

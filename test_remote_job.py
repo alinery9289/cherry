@@ -13,8 +13,8 @@ if __name__ == '__main__':
     job = {
         'filters': {
             'TemplateTranscoder': {'bitrate': '400'},
-#             'SyncTranscoder': {'codec': 'libx265', 'resolution': '1280*720','framerate:': '30','bitrate': '400k',
-#             'next':{'TemplateTransc oder': {'bitrate': '4000',},}},
+            'SimpleTranscoder': {'codec': 'libx265', 'resolution': '1280*720','framerate:': '30','bitrate': '400k',
+            'next':{'TemplateTransc oder': {'bitrate': '4000',},}},
         },
 
         # docker
