@@ -1,0 +1,14 @@
+{{ffmpeg}} \
+    -i {{before_file_name}} \
+    -s {{resolution|default('1280x720')}} \
+    -c:a {{acodec|default('copy')}} \
+    -c:v {{vcodec|default('libx265')}} \
+    -preset {{preset|default('slow')}} \
+    -x265-params --no-open-gop \
+    -x265-params --scenecut={{scenecut|default('40')}} \
+    -x265-params --wpp \
+    -x265-params --lft \
+    -x265-params --sao \
+    -x265-params --strict-cbr \
+    -x265-params  --bitrate={{bitrate|default('4000')}}  \
+    -y {{after_file_name}}

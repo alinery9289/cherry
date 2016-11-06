@@ -5,32 +5,31 @@ from kombu import Queue, Exchange
 
 from cherry.util.config import conf_dict
 
-rabbitmq_user = conf_dict['rabbitmq']['user']
-rabbitmq_password = conf_dict['rabbitmq']['password']
-rabbitmq_IP = conf_dict['rabbitmq']['ip']
-rabbitmq_port = conf_dict['rabbitmq']['port']
+rabbit_user = conf_dict['rabbitmq']['user']
+rabbit_password = conf_dict['rabbitmq']['password']
+rabbit_host = conf_dict['rabbitmq']['ip']
+rabbit_port = conf_dict['rabbitmq']['port']
 
-broker_str = 'amqp://' + rabbitmq_user + ':' + rabbitmq_password + '@' + rabbitmq_IP + ':' + rabbitmq_port
-backend_str = 'amqp://' + rabbitmq_user + ':' + rabbitmq_password + '@' + rabbitmq_IP + ':' + rabbitmq_port
-celery_app = Celery('Cherry',
-                     broker = broker_str,
-                     backend = backend_str,
-                     include=['cherry.tasks.task_tracker','cherry.jobs.job_tracker'])
+broker = """amqp://%s:%s@%s:%s""" % \
+    (rabbit_user, rabbit_password, rabbit_host, rabbit_port)
+backend = """amqp://%s:%s@%s:%s""" % \
+    (rabbit_user, rabbit_password, rabbit_host, rabbit_port)
 
-# Optional configuration, see the application user guide.
+celery_app = Celery('cherry',
+                    broker = broker,
+                    backend = backend,
+                    include=['cherry.tasks.tasks','cherry.jobs.launch'])
 
-# Group1_route_info = {"exchange": "Task", "routing_key": "Cherry.Group1"}
-# Job_route_info = {"exchange": "Job", "routing_key": "Cherry.Job"}
-
+# optional configurations, see the application user guide
 celery_app.conf.update(
     CELERY_QUEUES = (
-        Queue('Cherry_Task_Group1', Exchange('Task'), routing_key='Cherry.Task.Group1'),
-        Queue('Cherry_Job', Exchange('Job'), routing_key='Cherry.Job'),
+        Queue('cherry_task_group1', Exchange('task'), routing_key='cherry.task.group1'),
+        Queue('cherry_job', Exchange('job'), routing_key='cherry.job'),
     ),
     CELERY_ROUTES = {
-                     "Cherry.Task.tem_transcoder": {"exchange": "Task", "routing_key": "Cherry.Task.Group1"},
-#                     "Cherry.Task.sync_transcoder": {"exchange": "Task", "routing_key": "Cherry.Task.Group1"},
-                     "Cherry.Task.Job_tracker":{"exchange": "Job", "routing_key": "Cherry.Job"}}
+                     "cherry.task.TemplateTranscoder": {"exchange": "task", "routing_key": "cherry.task.group1"},
+                     # "Cherry.Task.SyncTranscoder": {"exchange": "Task", "routing_key": "Cherry.Task.Group1"},
+                     "cherry.task.job":{"exchange": "job", "routing_key": "cherry.job"}}
 
     # CELERY_DEFAULT_EXCHANGE = 'Cherry.TaskGroup_1',
     # CELERY_DEFAULT_EXCHANGE_TYPE = 'topic',
