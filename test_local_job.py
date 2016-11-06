@@ -5,7 +5,7 @@ if __name__ == '__main__':
     # parameters to slicer, in json format
     job = {
         'filters': {
-            # 	'SyncTranscoder': {'codec': 'libx265', 'resolution': '1280*720','framerate:': '30','bitrate': '1000k',
+            # 	'SimpleTranscoder': {'codec': 'libx265', 'resolution': '1280*720','framerate:': '30','bitrate': '1000k',
             # 		'next':{'blank_transcoder':{}},},
             'TemplateTranscoder': {'bitrate': '400'},
 

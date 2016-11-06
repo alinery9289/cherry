@@ -9,7 +9,6 @@ from __future__ import absolute_import
 
 import sys
 from cherry.tasks.filters import filters_dict
-# from cherry.tasks.filters import (sync_transcoder, blank_filter)
 
 from cherry.tasks.operators import (
     slicer, downloader, uploader, Merger, loader)
@@ -51,7 +50,7 @@ def generate_filter_task():
 #             _filter = filters_dict[filter_name]()
 #             return _filter.do_process_main(filter_params)
 #         task_dict[filter_name] = filter_task
-# 
+#
 #     return task_dict
 
     FUNC_TEMPLATE = "@celery_app.task(name='cherry.task.{func}')\ndef {func}(to_filter_para_in_str):\n\tprint sys._getframe().f_code.co_name\n\t"+\
@@ -59,12 +58,12 @@ def generate_filter_task():
 
     for fn in filters_dict:
         exec(FUNC_TEMPLATE.format(func=fn))
-        
+
     local_vars = dict(locals().items())
-    
+
     for fn in filters_dict:
         task_dict[fn] = local_vars[fn]
-        
+
     return task_dict
 
 task_dict = generate_filter_task()
