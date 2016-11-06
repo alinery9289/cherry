@@ -131,7 +131,7 @@ class Operator(object):
             # randomly change the str in case the hash collision
             key_str = time_str + 'any_salt'
             md5_generator.update(key_str)
-            key = md5_generator.hexdigest()
+            key = md5_generator.hexdigest()[0:16]
             return key
 
 
@@ -222,6 +222,9 @@ class Downloader(Operator, Singleton):
                                       cxt['segment_file_name'])
 
         self.download_file(data_key, data_file_name)
+        from cherry.util.logtool import TaskLogger
+        task_log =  TaskLogger("12321")
+        task_log.info(data_key)
         self.redis_del(data_key)
         del cxt['data_key']
 

@@ -16,6 +16,7 @@ import json
 from cherry.util.exceptions import FFmpegExecuteError
 from cherry.util.template import Template
 from cherry.util import roam
+from cherry.util.logtool import Logger,TaskLogger
 from cherry.tasks.operators import Operator, Singleton
 
 
@@ -47,18 +48,19 @@ class FilterBase(Operator, Singleton):
                 filter_params_str)
 
             # download the segment need to be transcoded
-            print("downloading task[%s] from job tracker" % task_id)
+            logger = Logger()
+            logger.info("downloading task[%s] from job tracker" % task_id)
             self.download_file(src, self.before_name)
 
             # do the filter process the segment with FFmpeg
-            print("processing task[%s]" % task_id)
+            logger.info("processing task[%s]" % task_id)
             self.filter_foo(task_id, filter_params)
 
             # upload the transcoded segment
-            print("uploading task[%s] to job tracker" % task_id)
+            logger.info("uploading task[%s] to job tracker" % task_id)
             self.upload_file(src, self.after_name)
 
-            print("processing task[%s] done" % task_id)
+            logger.info("processing task[%s] done" % task_id)
             return filter_params_str
 
 
@@ -73,7 +75,6 @@ class SyncTranscoder(FilterBase):
         print "here is:" + self.filter_name
 
     def filter_foo(self,task_id, codec_parameter):
-        print 'this is a ffmpeg filter!!!'
 
         self.before_name
         self.after_name
@@ -119,10 +120,10 @@ class TemplateTranscoder(FilterBase):
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
                                     universal_newlines=True)
-
+        task_logger = TaskLogger(task_id)
         while True:
             line = process2.stdout.readline()
-#             print(line)
+            task_logger.debug(line)
             if not line:
                 break
 
