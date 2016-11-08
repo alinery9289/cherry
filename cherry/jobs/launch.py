@@ -19,36 +19,6 @@ from cherry.tasks.tasks import task_dict
 from cherry.celery import celery_app
 from celery import chain, group, chord
 
-
-"""
-这里使用了轮询的方式，而非celery内置的group或者chord，是因为group使用一直出现bug，如果能使用
-group代替轮询的方式，会是一个比较优雅的做法。
-使用group以及chord失败的残留代码如下
-
-# task = group(filter_chain_s(segment) for segment in segments)
-# try:
-    # task = chord((chain(task_dict['task_upload'].s(i),
-    # task_dict['task_downlaod'].s()) for i in
-    # task_dict['task_slice'](params)), task_dict['task_merge'].s())
-    # task = chord(filter_chain_s(segment) for segment in sgements)(task_dict['task_merge'].s())
-    # task = group(chain(filter_chain_s(i)) for i in
-    # task_dict['task_slice'](params))
-    # task = chord([filter_chain_s(segment[0])],
-    # task_dict['task_merge'].si(params))
-    # async_r = []
-    # for segment in segments:
-    #     async_r.append(task_dict['task_upload'].s(segment))
-    # g = group(*async_r)
-    # pdb.set_trace()
-
-
-# except Exception, e:
-#     pdb.set_trace()
-
-# task = group(chain(filter_chain_s(segment)) for segment in segments)
-"""
-
-
 @celery_app.task(name='cherry.task.sliced_job')
 def launch_quick_job(context):
     """launch jobs through celery

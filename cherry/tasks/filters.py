@@ -24,6 +24,7 @@ class FilterBase(Operator, Singleton):
 
     def __init__(self):
         super(FilterBase, self).__init__()
+        
         self.before_name = 'before.mp4'
         self.after_name = 'after.mp4'
         self.filter_name = self.get_filter_name()
@@ -34,7 +35,8 @@ class FilterBase(Operator, Singleton):
 
         data_key = params_json['data_key']
         task_id = params_json['task_id']
-        return filter_params, data_key, task_id
+        cache_type = params_json['cache_type']
+        return filter_params, data_key, task_id,cache_type
 
     def get_filter_name(self):
         return self.__class__.__name__
@@ -44,13 +46,22 @@ class FilterBase(Operator, Singleton):
 
     def do_process_main(self, filter_params_str):
         with roam.RoamCxt(self.roam_path):
-            filter_params, src, task_id = self._parameter_decode(
+            filter_params, data_key, task_id, cache_type = self._parameter_decode(
                 filter_params_str)
-
+            
+            if (cache_type == 'redis'):
+                self.download_file = self.redis_download_file
+                self.upload_file = self.redis_upload_file
+            elif (cache_type == 'ftp'):
+                self.download_file = self.ftp_download_file
+                self.upload_file = self.ftp_upload_file
+            else :
+                raise ValueError('could not recognise cache_type: %s' % cache_type)
+            
             # download the segment need to be transcoded
             logger = Logger()
             logger.info("downloading task[%s] from job tracker" % task_id)
-            self.download_file(src, self.before_name)
+            self.download_file(data_key, self.before_name)
 
             # do the filter process the segment with FFmpeg
             logger.info("processing task[%s]" % task_id)
@@ -58,7 +69,7 @@ class FilterBase(Operator, Singleton):
 
             # upload the transcoded segment
             logger.info("uploading task[%s] to job tracker" % task_id)
-            self.upload_file(src, self.after_name)
+            self.upload_file(data_key, self.after_name)
 
             logger.info("processing task[%s] done" % task_id)
             return filter_params_str

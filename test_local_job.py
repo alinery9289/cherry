@@ -10,6 +10,7 @@ if __name__ == '__main__':
             'TemplateTranscoder': {'bitrate': '400'},
 
         },
+        'cache_type':'ftp',
         # linux
 #         'input_file_path': '/cherry-run/video_files/in.mp4',
 #         'output_file_path': '/cherry-run/video_files/out.mp4'

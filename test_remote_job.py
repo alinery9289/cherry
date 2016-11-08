@@ -13,10 +13,10 @@ if __name__ == '__main__':
     job = {
         'filters': {
             'TemplateTranscoder': {'bitrate': '400'},
-            'SimpleTranscoder': {'codec': 'libx265', 'resolution': '1280*720','framerate:': '30','bitrate': '400k',
-            'next':{'TemplateTransc oder': {'bitrate': '4000',},}},
+#             'SimpleTranscoder': {'codec': 'libx265', 'resolution': '1280*720','framerate:': '30','bitrate': '400k',
+#             'next':{'TemplateTransc oder': {'bitrate': '4000',},}},
         },
-
+        'cache_type':'ftp',
         # docker
 #         'input_file_path': '/cherry-run/video_files/in.mp4',
 #         'output_file_path': '/cherry-run/video_files/out.mp4'

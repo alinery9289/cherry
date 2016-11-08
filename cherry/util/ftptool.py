@@ -40,7 +40,7 @@ class FtpClient:
             # print u'Begin to login %s' %(self.hostaddr)
             ftp.login(self.username, self.password)
             # print u'Login %s succeed' %(self.hostaddr)
-            debug_print(ftp.getwelcome())
+#             debug_print(ftp.getwelcome())
         except Exception:
             print u'Login failed'
         try:
@@ -56,9 +56,6 @@ class FtpClient:
     def upload_file(self, localfile, remotefile):
         if not os.path.isfile(localfile):
             return
-        if self.is_same_size(localfile, remotefile):
-            debug_print(u'Skip %s' % localfile)
-            return
         file_handler = open(localfile, 'rb')
 
         remotedir = remotefile.split('/')
@@ -68,9 +65,12 @@ class FtpClient:
             except:
                 pass
             self.ftp.cwd(now_dir)
-        self.ftp.storbinary('STOR %s' % remotefile, file_handler)
+        self.ftp.storbinary('STOR %s' % remotedir[-1], file_handler)
         file_handler.close()
-        debug_print(u'Have delivered %s' % localfile)
+#         debug_print(u'Have delivered %s' % localfile)
+
+    def delete_file(self, remotefile):
+        return self.ftp.delete(remotefile)
 
     def get_file_list(self, line):
         ret_arr = []
