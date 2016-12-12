@@ -22,3 +22,6 @@ class GPACExecuteError(Exception):
 
 class InternalError(Exception):
     '''Internal error'''
+
+class ParamterError(Exception):
+    '''Internal error'''

@@ -10,17 +10,18 @@ from __future__ import absolute_import
 
 import os
 import sys
+import shutil
 import subprocess
-import json
 
-from cherry.util.exceptions import FFmpegExecuteError
+from cherry.util.config import conf_dict as conf
+from cherry.util.exceptions import FFmpegExecuteError, ParamterError
 from cherry.util.template import Template
 from cherry.util import roam
 from cherry.util.logtool import Logger,TaskLogger
 from cherry.tasks.operators import Operator, Singleton
 
 
-class FilterBase(Operator, Singleton):
+class FilterBase(Operator):
 
     def __init__(self):
         super(FilterBase, self).__init__()
@@ -28,27 +29,34 @@ class FilterBase(Operator, Singleton):
         self.before_name = 'before.mp4'
         self.after_name = 'after.mp4'
         self.filter_name = self.get_filter_name()
-
-    def _parameter_decode(self, params_str):
-        params_json = json.loads(params_str)
-        filter_params = params_json['filters'][self.filter_name]
-
-        data_key = params_json['data_key']
-        task_id = params_json['task_id']
-        cache_type = params_json['cache_type']
-        return filter_params, data_key, task_id,cache_type
-
+        self.local_filters = conf['all']['filters'].split(',')
+        
     def get_filter_name(self):
         return self.__class__.__name__
+    
+    def update_data_key(self,data_key,index_series):
+        data_key_values = data_key.split('.')
+        data_key_values[-3] = data_key_values[-3]+'_'+str(index_series)
+        return '.'.join(data_key_values) 
 
     def filter_foo(self, task_id, filter_params):
         pass
 
-    def do_process_main(self, filter_params_str):
-        with roam.RoamCxt(self.roam_path):
-            filter_params, data_key, task_id, cache_type = self._parameter_decode(
-                filter_params_str)
+    def do_process_main(self, context):
+        with roam.RoamCxt(self.roam_path) as roam_cxt:
+            # decode parameter
+            try :
+                filter_params = context['filters'][self.filter_name]
+                cache_type = context['cache_type']
+                task_id = context['task_id']
+                data_key = context['data_key']
+                index_series = context['index_series']
+                is_local = context['is_local'] #never local= 0, previous data not in local= 1,previous data in local = 2;  
+                return_data_key = self.update_data_key(data_key,index_series)
+            except Exception,e:
+                raise ParamterError('could not parse the parameter.%s :%s'%(Exception,e))
             
+            #choose the cache_type
             if (cache_type == 'redis'):
                 self.download_file = self.redis_download_file
                 self.upload_file = self.redis_upload_file
@@ -58,22 +66,81 @@ class FilterBase(Operator, Singleton):
             else :
                 raise ValueError('could not recognise cache_type: %s' % cache_type)
             
-            # download the segment need to be transcoded
             logger = Logger()
-            logger.info("downloading task[%s] from job tracker" % task_id)
-            self.download_file(data_key, self.before_name)
+            # download the segment need to be transcoded
+            logger.info("downloading data [%s] from job tracker" % data_key)
+            if is_local==2:
+                shutil.copy(context['local_data_key'],self.before_name)
+            else:
+                self.download_file(data_key, self.before_name)
 
             # do the filter process the segment with FFmpeg
-            logger.info("processing task[%s]" % task_id)
+            logger.info("processing data [%s]" % data_key)
             self.filter_foo(task_id, filter_params)
+            
+            # judge if process next filter in local 
+            next_filter_names = []
+            if is_local == 0:
+                next_is_local = 0
+#                 logger.info("is_local: %s" % is_local)
+            else :
+                return_new_contexts = []
+                if (filter_params['next']!={}):    
+                    next_is_local = 2
+                    for one_next_filter in filter_params['next']:
+                        next_filter_name = one_next_filter.keys()[0]
+                        next_filter_names.append(next_filter_name)
+                        if next_filter_name not in self.local_filters:
+                            next_is_local = 1
+#                             logger.info("is_local: %s" % is_local)
+                            break
+                else :
+                    next_is_local = 1
 
-            # upload the transcoded segment
-            logger.info("uploading task[%s] to job tracker" % task_id)
-            self.upload_file(data_key, self.after_name)
-
-            logger.info("processing task[%s] done" % task_id)
-            return filter_params_str
-
+            # send control command to local next filter or job tracker
+            if (next_is_local == 2 and filter_params['next']!={}):
+                
+                logger.info("is_local: %s" % is_local)
+                next_contexts = [{'filters': one_next_filter,
+                                  'cache_type': cache_type,
+                                  'task_id': task_id,
+                                  'index_series': num,
+                                  'data_key': return_data_key,
+                                  'is_local':next_is_local,
+                                  'local_data_key':os.path.join(self.roam_path, roam_cxt.roam_path,self.after_name),}
+                                 for num,one_next_filter in enumerate(filter_params['next'])]
+                
+                logger.info("processing data [%s] done" % data_key)
+                logger.info("will processing next data [%s] locally" % return_data_key) 
+                for next_content in next_contexts: #call next filters
+                    next_filter_instance = filters_dict[next_content['filters'].keys()[0]]()
+                    return_new_contexts.extend(next_filter_instance.do_process_main(next_content))
+                    print '_____________________'
+                    print return_new_contexts
+                    print '_____________________'
+                return return_new_contexts
+            elif (filter_params['next']=={}):
+                next_contexts = [{'filters': {},
+                                  'output_file_path':filter_params['output_file_path'],
+                                  'cache_type': cache_type,
+                                  'task_id': task_id,
+                                  'index_series': 0,
+                                  'data_key':return_data_key, 
+                                  'is_local':next_is_local,}]
+                
+            else:
+                next_contexts = [{'filters': one_next_filter,
+                                  'cache_type': cache_type,
+                                  'task_id': task_id,
+                                  'index_series': num,
+                                  'data_key': return_data_key, #next_process_over
+                                  'is_local':next_is_local,}
+                                 for num,one_next_filter in enumerate(filter_params['next'])]
+                
+            logger.info("processing data [%s] done" % return_data_key)
+            self.upload_file(return_data_key, self.after_name)
+            logger.info("uploading next data [%s] to job tracker ok" % return_data_key)
+            return next_contexts
 
 class SimpleTranscoder(FilterBase):
     """transcode with ffmpeg
@@ -134,7 +201,7 @@ class TemplateTranscoder(FilterBase):
         task_logger = TaskLogger(task_id)
         while True:
             line = process2.stdout.readline()
-            task_logger.debug(line)
+#             task_logger.debug(line)
             if not line:
                 break
 

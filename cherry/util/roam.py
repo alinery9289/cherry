@@ -31,6 +31,7 @@ class RoamCxt(object):
         if generate_hash_dir:
             if given_dir is None:
                 self._roam_dir = self._generate_dir_name()
+                print  "now dir is %s"%self._roam_dir
 
     @property
     def roam_path(self):
@@ -52,6 +53,7 @@ class RoamCxt(object):
 
             if not os.path.exists(self._roam_dir):
                 os.mkdir(self._roam_dir)
+                print("make dir %s" % self._roam_dir)
             print("switching to dir %s" % self._roam_dir)
             os.chdir(self._roam_dir)
         return self

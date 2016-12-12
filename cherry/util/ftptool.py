@@ -72,6 +72,10 @@ class FtpClient:
     def delete_file(self, remotefile):
         return self.ftp.delete(remotefile)
 
+    def list_file(self,file_path):
+        self.ftp.cwd(file_path)
+        return self.ftp.nlst()
+    
     def get_file_list(self, line):
         ret_arr = []
         file_arr = self.get_filename(line)

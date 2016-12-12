@@ -11,7 +11,7 @@ import sys
 from cherry.tasks.filters import filters_dict
 
 from cherry.tasks.operators import (
-    slicer, downloader, uploader, Merger, loader)
+    slicer, downloader, uploader, Merger, loader, backer, deleter)
 
 from cherry.celery import celery_app
 
@@ -21,6 +21,11 @@ from cherry.celery import celery_app
 def task_load(params):
     return loader.load(params)
 
+def task_back(params):
+    return backer.back(params)
+
+def task_delete_cache(params):
+    return deleter.delete_cache(params)
 
 def task_upload(params):
     return uploader.upload(params)
@@ -95,3 +100,5 @@ task_dict['task_merge'] = task_merge
 task_dict['task_upload'] = task_upload
 task_dict['task_download'] = task_download
 task_dict['task_load'] = task_load
+task_dict['task_back'] = task_back
+task_dict['task_delete_cache'] = task_delete_cache
