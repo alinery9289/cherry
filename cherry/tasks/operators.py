@@ -185,8 +185,8 @@ class Slicer(Operator, Singleton):
     def _do_segmentation(self, file_name):
         """segment input file in current directory (os.getcwd())
         """
-        cmd = "ffmpeg -i %s -f segment -segment_time 15 -c copy -map 0 " \
-            "segment%%d.mp4" % file_name
+        cmd = "%s -i %s -f segment -segment_time 15 -c copy -map 0 " \
+            "segment%%d.mp4" % (conf['tools']['ffmpeg'],file_name)
 
         ret = os.system(cmd)
         if ret != 0:
@@ -231,7 +231,6 @@ class Merger(Operator):
         return int(segment_file_name.split('_')[0][7:])
 
     def _execute_mp4box(self, output_file_path, task_id, index_list, slicer_nums):
-        print os.getcwd()
         all_return_segments = os.listdir(os.getcwd())
         segments = []
         reobj = re.compile('segment[0-9]+_'+index_list+'\.[a-zA-Z0-9]+')
@@ -243,7 +242,7 @@ class Merger(Operator):
             raise InternalError('segments_num is not right')
 
         segments = sorted(segments, key=self._index_of_segment)
-        s = 'MP4Box '
+        s = '%s '%conf['tools']['mp4box']
         for segment in segments:
             s += '-cat ' + segment + ' '
         s += '-new ' + output_file_path
@@ -293,7 +292,7 @@ class Loader(Operator, Singleton):
             src_file = cxt['input_file_path']
             dst_file = os.path.join(self.roam_path, roam_cxt.roam_path,
                                     "before", "segment.mp4")
-            print("copying file %s to %s" % (src_file, dst_file))
+            task_logger.info("copying file %s to %s" % (src_file, dst_file))
             try:
                 shutil.copyfile(src_file, dst_file)
             except Exception as e:
@@ -313,7 +312,7 @@ class Backer(Operator, Singleton):
         task_id = cxt['task_id']
         
         shutil.move(data_file_name, output_file_path)
-        print("Backer: Move output file %s ..." %
+        task_logger.info("Backer: Move output file %s ..." %
               (os.path.join(self.roam_path, task_id)))
         return cxt
         

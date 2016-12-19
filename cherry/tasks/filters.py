@@ -112,12 +112,10 @@ class FilterBase(Operator):
                 
                 logger.info("processing data [%s] done" % data_key)
                 logger.info("will processing next data [%s] locally" % return_data_key) 
+                
                 for next_content in next_contexts: #call next filters
                     next_filter_instance = filters_dict[next_content['filters'].keys()[0]]()
                     return_new_contexts.extend(next_filter_instance.do_process_main(next_content))
-                    print '_____________________'
-                    print return_new_contexts
-                    print '_____________________'
                 return return_new_contexts
             elif (filter_params['next']=={}):
                 next_contexts = [{'filters': {},
@@ -150,15 +148,14 @@ class SimpleTranscoder(FilterBase):
         super(SimpleTranscoder, self).__init__()
 
         self.filter_name = self.get_filter_name()
-        print "here is:" + self.filter_name
 
     def filter_foo(self,task_id, codec_parameter):
 
         self.before_name
         self.after_name
 
-        s = 'ffmpeg -i %s -c:v %s -b:v %s -c:a copy -s %s %s' % (
-            self.before_name, codec_parameter['codec'],
+        s = '%s -i %s -c:v %s -b:v %s -c:a copy -s %s %s' % (
+            conf['tools']['mp4box'], self.before_name, codec_parameter['codec'],
             codec_parameter['bitrate'],
             codec_parameter['resolution'],
             self.after_name)
@@ -173,7 +170,6 @@ class TemplateTranscoder(FilterBase):
         super(TemplateTranscoder, self).__init__()
 
         self.filter_name = self.get_filter_name()
-        print "here:" + self.filter_name
 
     def filter_foo(self, task_id, codec_parameter):
         print("filter_foo @ TemplateTranscoder")
