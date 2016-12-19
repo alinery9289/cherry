@@ -36,7 +36,7 @@ class Template(Singleton):
         print("template: %s" % template_file)
         print("params: %s" % params)
 
-        params.update(conf_dict['4k_tool'])
+        params.update(conf_dict['tools'])
         rendered_str = self.env.get_template(template_file).render(params)
 
         # for windows: replace \n with \r\n
