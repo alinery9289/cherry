@@ -155,7 +155,7 @@ class SimpleTranscoder(FilterBase):
         self.after_name
 
         s = '%s -i %s -c:v %s -b:v %s -c:a copy -s %s %s' % (
-            conf['tools']['ffmpeg'], self.before_name, codec_parameter['codec'],
+            conf['tools']['mp4box'], self.before_name, codec_parameter['codec'],
             codec_parameter['bitrate'],
             codec_parameter['resolution'],
             self.after_name)
