@@ -10,7 +10,7 @@ log_path = conf_dict['all']['log_path']
   
 fmt = '%(asctime)s [%(levelname)s] %(message)s' 
 datefmt='%a, %d %b %Y %H:%M:%S' 
-formatter = logging.Formatter(fmt= fmt, datefmt= datefmt)
+formatter = logging.Formatter(fmt= fmt)
 
 class Logger():
     
