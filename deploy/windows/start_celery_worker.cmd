@@ -1,6 +1,6 @@
 @echo off
 
-set worker_name=worker3
+set worker_name=worker1
 call .\set_env.cmd
 cd ../../
 celery -A cherry worker --loglevel=info --pool=solo -n %worker_name% -Q cherry_task_group1

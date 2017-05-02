@@ -13,50 +13,13 @@ from __future__ import absolute_import
 
 import time
 import copy
-from celery.result import AsyncResult
-from cherry.tasks.operators import loader,uploader,downloader
-from cherry.tasks.tasks import task_dict
+# from celery.result import AsyncResult
+
+
 from cherry.celery import celery_app
-from celery import chain, group, chord
-
-
-@celery_app.task(name='cherry.task.quick_job')
-def launch_quick_job(context):
-    """launch jobs through celery
-
-    context: json-serialized parameters of the job
-    """
-    # generate filter chain
-    filters = context['filters'].keys()
-    _chain = []
-    for f in filters:
-        _chain.append(task_dict[f].s()) # s(): celery subtask
-    filter_chain = chain(_chain)
-
-    sub_contexts = task_dict['task_slice'](context)
-
-    subtasks = []
-    for cxt in sub_contexts:
-        cxt = task_dict['task_upload'](cxt)
-        subtasks.append(filter_chain(cxt))
-
-    cxts = []
-    while subtasks:
-        del_list = []
-        for i in range(len(subtasks)):
-            if subtasks[i].successful():
-                # print "OK!"
-                del_list.append(i)
-                cxt = subtasks[i].get()
-                cxts.append(task_dict['task_download'](cxt))
-
-        for i in reversed(del_list):
-            del subtasks[i]
-
-        time.sleep(1)
-        print len(cxts)
-
-    context = task_dict['task_merge'](cxts)
+from cherry.tasks.tasks import task_dict
+from cherry.util.mediafiletool import add_new_file
+from cherry.util.sqltool import update_processlog_by_job_id
     
 @celery_app.task(name='cherry.task.sliced_job')
 def launch_sliced_job(context):
@@ -82,7 +45,7 @@ def launch_sliced_job(context):
         while subtasks_id:
     #         del_list = []
             for one_id in subtasks_id:
-                subtasks_id_result = AsyncResult(one_id);
+                subtasks_id_result = celery_app.AsyncResult(one_id);
                 if subtasks_id_result.successful():
                     # print "OK!"
     #                 del_list.append(i)
@@ -95,6 +58,7 @@ def launch_sliced_job(context):
                                 if (index_list_dict[index_list]>=slicer_nums-1):
                                     download_cxt['slicer_nums'] = slicer_nums
                                     task_dict['task_merge'](download_cxt)
+                                    add_new_file(download_cxt)#添加数据库
                                     index_list_dict.pop(index_list)
                                 else:
                                     index_list_dict[index_list] +=1
@@ -113,6 +77,7 @@ def launch_sliced_job(context):
                     print "error"
                     subtasks_id.remove(one_id)    
             time.sleep(1)
+        update_processlog_by_job_id(res['job_id'],'succeed')
     except Exception,e:
         raise IOError("error: %s" % str(e))
     finally:
@@ -141,7 +106,7 @@ def launch_intact_job(context):
         while subtasks_id:
     #         del_list = []
             for one_id in subtasks_id:
-                subtasks_id_result = AsyncResult(one_id);
+                subtasks_id_result = celery_app.AsyncResult(one_id);
                 if subtasks_id_result.successful():
                     # print "OK!"
     #                 del_list.append(i)
@@ -149,7 +114,8 @@ def launch_intact_job(context):
                     for one_cxt_json in cxt_list:
                         if (not one_cxt_json.has_key('filters') or one_cxt_json['filters']=={}):
                             download_cxt = task_dict['task_download'](one_cxt_json)#知道已经结束，开始最后的下载，但是未记录
-                            back_cxt = task_dict['task_back'](download_cxt)
+                            task_dict['task_back'](download_cxt)
+                            add_new_file(download_cxt)#添加数据库
                             #判断是否需要合成，将现有文件对应的列表值加1，然后判断是否达到规定值
                         else:
                             next_filter = one_cxt_json['filters'].keys()[0]
@@ -162,7 +128,11 @@ def launch_intact_job(context):
                     print "error"
                     subtasks_id.remove(one_id)    
             time.sleep(1)
+        update_processlog_by_job_id(res['job_id'],'succeed')
     except Exception,e:
         raise IOError("error: %s" % str(e))
     finally:
         task_dict['task_delete_cache'](load_ret)
+        
+
+    

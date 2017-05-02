@@ -24,4 +24,7 @@ class InternalError(Exception):
     '''Internal error'''
 
 class ParamterError(Exception):
-    '''Internal error'''
+    '''Paramter error'''
+    
+class MySQLError(Exception):
+    '''Sql execute error'''

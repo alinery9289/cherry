@@ -10,15 +10,22 @@ from __future__ import absolute_import
 
 import os
 import sys
+import copy
 import shutil
 import subprocess
 
+from datetime import datetime
+
 from cherry.util.config import conf_dict as conf
-from cherry.util.exceptions import FFmpegExecuteError, ParamterError
 from cherry.util.template import Template
-from cherry.util import roam
+from cherry.util import roam, statetool
 from cherry.util.logtool import Logger,TaskLogger
+from cherry.util.exceptions import ParamterError,FFmpegExecuteError
+from cherry.util.sqltool import Task,engine_info, add_record, update_dealstate_time_by_taskid
+from cherry.util.redistool import redis_set
 from cherry.tasks.operators import Operator, Singleton
+from _ast import Num
+
 
 
 class FilterBase(Operator):
@@ -43,19 +50,31 @@ class FilterBase(Operator):
         pass
 
     def do_process_main(self, context):
-        with roam.RoamCxt(self.roam_path) as roam_cxt:
+        
+        task_id = self.generate_task_id()
+        with roam.RoamCxt(self.roam_path, given_dir = task_id) as roam_cxt:
             # decode parameter
             try :
                 filter_params = context['filters'][self.filter_name]
                 cache_type = context['cache_type']
-                task_id = context['task_id']
+                job_id = context['job_id']
                 data_key = context['data_key']
                 index_series = context['index_series']
                 is_local = context['is_local'] #never local= 0, previous data not in local= 1,previous data in local = 2;  
                 return_data_key = self.update_data_key(data_key,index_series)
+                if 'father_id' in context:
+                    father_id = context['father_id']
+                else :
+                    father_id = job_id
+                
             except Exception,e:
                 raise ParamterError('could not parse the parameter.%s :%s'%(Exception,e))
+            #sql create task
             
+            
+            new_task = Task(taskid = task_id,fatherid =father_id, dealmethod = self.filter_name, 
+                            dealstate = "processing", dealtime = datetime.now())
+            add_record(new_task)
             #choose the cache_type
             if (cache_type == 'redis'):
                 self.download_file = self.redis_download_file
@@ -66,8 +85,8 @@ class FilterBase(Operator):
             else :
                 raise ValueError('could not recognise cache_type: %s' % cache_type)
             
-            logger = Logger()
             # download the segment need to be transcoded
+            logger = TaskLogger(task_id)
             logger.info("downloading data [%s] from job tracker" % data_key)
             if is_local==2:
                 shutil.copy(context['local_data_key'],self.before_name)
@@ -75,8 +94,10 @@ class FilterBase(Operator):
                 self.download_file(data_key, self.before_name)
 
             # do the filter process the segment with FFmpeg
-            logger.info("processing data [%s]" % data_key)
+            logger.info("processing data [%s] in task:[%s]" % (data_key,task_id))
             self.filter_foo(task_id, filter_params)
+            
+            update_dealstate_time_by_taskid(task_id,"succeed")
             
             # judge if process next filter in local 
             next_filter_names = []
@@ -98,46 +119,54 @@ class FilterBase(Operator):
                     next_is_local = 1
 
             # send control command to local next filter or job tracker
+            
+            next_contexts=[]
             if (next_is_local == 2 and filter_params['next']!={}):
                 
                 logger.info("is_local: %s" % is_local)
-                next_contexts = [{'filters': one_next_filter,
-                                  'cache_type': cache_type,
-                                  'task_id': task_id,
-                                  'index_series': num,
-                                  'data_key': return_data_key,
-                                  'is_local':next_is_local,
-                                  'local_data_key':os.path.join(self.roam_path, roam_cxt.roam_path,self.after_name),}
-                                 for num,one_next_filter in enumerate(filter_params['next'])]
+                for num,one_next_filter in enumerate(filter_params['next']):
+                    one_next_context = copy.deepcopy(context)
+                    one_next_context['father_id']= task_id
+                    one_next_context['index_series']= num
+                    one_next_context['data_key']= return_data_key
+                    one_next_context['is_local']= next_is_local
+                    one_next_context['local_data_key']=os.path.join(self.roam_path, roam_cxt.roam_path,self.after_name)
+                    one_next_context['filters'] = one_next_filter
+                    next_contexts.append(one_next_context)
                 
-                logger.info("processing data [%s] done" % data_key)
                 logger.info("will processing next data [%s] locally" % return_data_key) 
                 
                 for next_content in next_contexts: #call next filters
                     next_filter_instance = filters_dict[next_content['filters'].keys()[0]]()
                     return_new_contexts.extend(next_filter_instance.do_process_main(next_content))
+                logger.info("processing data [%s] done" % data_key)
+                logger.release()
                 return return_new_contexts
             elif (filter_params['next']=={}):
-                next_contexts = [{'filters': {},
-                                  'output_file_path':filter_params['output_file_path'],
-                                  'cache_type': cache_type,
-                                  'task_id': task_id,
-                                  'index_series': 0,
-                                  'data_key':return_data_key, 
-                                  'is_local':next_is_local,}]
+                one_next_context = copy.deepcopy(context)
+                one_next_context['father_id']= task_id
+                one_next_context['index_series']= 0
+                one_next_context['data_key']= return_data_key
+                one_next_context['is_local']= next_is_local
+                one_next_context['output_file_path']=filter_params['output_file_path']
+                one_next_context['output_file_name']=filter_params['output_file_name']
+                one_next_context['filters'] = {}
+                next_contexts.append(one_next_context)
                 
             else:
-                next_contexts = [{'filters': one_next_filter,
-                                  'cache_type': cache_type,
-                                  'task_id': task_id,
-                                  'index_series': num,
-                                  'data_key': return_data_key, #next_process_over
-                                  'is_local':next_is_local,}
-                                 for num,one_next_filter in enumerate(filter_params['next'])]
+                for num,one_next_filter in enumerate(filter_params['next']):
+                    one_next_context = copy.deepcopy(context)
+                    one_next_context['father_id']= task_id
+                    one_next_context['index_series']= num
+                    one_next_context['data_key']= return_data_key
+                    one_next_context['is_local']= next_is_local
+                    one_next_context['filters'] = one_next_filter
+                    next_contexts.append(one_next_context)
                 
             logger.info("processing data [%s] done" % return_data_key)
             self.upload_file(return_data_key, self.after_name)
             logger.info("uploading next data [%s] to job tracker ok" % return_data_key)
+            logger.release()
             return next_contexts
 
 class SimpleTranscoder(FilterBase):
@@ -153,15 +182,29 @@ class SimpleTranscoder(FilterBase):
 
         self.before_name
         self.after_name
-
-        s = '%s -i %s -c:v %s -b:v %s -c:a copy -s %s %s' % (
+        
+        # initializtion 1.14
+        statetool.dic.clear()
+        statetool.prev_dic.clear()
+        statetool.process_step = "unprocessed"
+        script = '%s -i %s -c:v %s -b:v %s -c:a copy -s %s %s' % (
             conf['tools']['ffmpeg'], self.before_name, codec_parameter['codec'],
             codec_parameter['bitrate'],
             codec_parameter['resolution'],
             self.after_name)
-        ret = os.system(s)
-        if ret != 0:
-            raise FFmpegExecuteError('FFmpeg execute error: %s' % s)
+#         ret = os.system(s)
+        
+        process = subprocess.Popen(script,
+                            shell=True,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    universal_newlines=True)
+        while True:
+            line = process.stdout.readline()
+            statetool.add_ffmpeg_state_to_redis(task_id,line)
+            if not line:
+                break
+        statetool.add_ffmpeg_state_to_redis(task_id,'all_complete\n')
 
 
 class TemplateTranscoder(FilterBase):
@@ -174,6 +217,7 @@ class TemplateTranscoder(FilterBase):
     def filter_foo(self, task_id, codec_parameter):
         print("filter_foo @ TemplateTranscoder")
 
+        task_logger = TaskLogger(task_id)
         template_params = {'before_file_name': self.before_name,
                            'after_file_name': self.after_name}
         template_params.update(codec_parameter)
@@ -189,14 +233,19 @@ class TemplateTranscoder(FilterBase):
         # TODO: check whether this is ok on windows
         script = os.path.join(os.getcwd(), script)
         print("absolute path of script %s" % script)
+        # initializtion 1.14
+        statetool.dic.clear()
+        statetool.prev_dic.clear()
+        statetool.process_step = "unprocessed"
+        
         process2 = subprocess.Popen(script,
                                     shell=True,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
                                     universal_newlines=True)
-        task_logger = TaskLogger(task_id)
         while True:
             line = process2.stdout.readline()
+            statetool.add_ffmpeg_state_to_redis(task_id,line)
 #             task_logger.debug(line)
             if not line:
                 break

@@ -9,10 +9,11 @@ from __future__ import absolute_import
 
 import os
 import re
+import copy
 import time
+import uuid
 import redis
 import shutil
-import hashlib
 
 
 from cherry.util import roam
@@ -36,8 +37,8 @@ from cherry.util.ftptool import FtpClient
 # logger.setLevel(logging.DEBUG)
 # logger.addHandler(handler)                   # register handler
 
-from cherry.util.logtool import TaskLogger
-task_logger =  TaskLogger("123456")
+from cherry.util.logtool import Logger
+today_logger = Logger()
 
 class Singleton(object):
     """Singleton decorator
@@ -74,18 +75,11 @@ class Operator(object):
             self.ftp_port)
     
     def generate_task_id(self):
-        md5_generator = hashlib.md5()
-        time_str = str(time.time())
-        while True:
-            # randomly change the str in case the hash collision
-            key_str = time_str + 'any_salt'
-            md5_generator.update(key_str)
-            key = md5_generator.hexdigest()[0:16]
-            return key
+        return str(uuid.uuid1()).replace('-','')[0:24]
     
     def redis_upload_file(self, key, local_file):
 #         print("upload file to redis: (k,v) = (%s, %s)" % (key, local_file))
-        task_logger.info("redis upload %s " %key)
+        today_logger.info("redis upload %s " %key)
         with open(local_file, 'rb') as f:
             data = f.read()
             self.redis_connection.set(key, data)
@@ -97,7 +91,7 @@ class Operator(object):
         self.ftp_connection.upload_file(local_file, remote_file)
            
     def redis_download_file(self, key, local_name):
-        task_logger.info("redis download %s"%key)
+        today_logger.info("redis download %s"%key)
         data = self.redis_connection.get(key)
         with open(local_name, 'wb') as f:
             f.write(data)    
@@ -119,15 +113,15 @@ class Uploader(Operator, Singleton):
         context: json-serialized job description
         return: json-serialized context, for subsequent processing
         """
-        task_id = cxt['task_id']
+        job_id = cxt['job_id']
         cache_type = cxt['cache_type']
         
           
-        data_key = task_id + '.' + cxt['segment_file_name'] + '.data'
-        file_name = os.path.join(self.roam_path, task_id, 'before',
+        data_key = job_id + '.' + cxt['segment_file_name'] + '.data'
+        file_name = os.path.join(self.roam_path, job_id, 'before',
                                  cxt['segment_file_name'])
 
-        task_logger.info("Uploader: uploading file %s, data_key %s" %
+        today_logger.info("Uploader: uploading file %s, data_key %s" %
               (file_name, data_key))
         # upload to redis or ftp server
         if (cache_type == 'redis'): 
@@ -152,11 +146,11 @@ class Downloader(Operator, Singleton):
         return: json-serialized context, for subsequent processing
         """
         data_key = cxt['data_key']
-        task_id = cxt['task_id']
+        job_id = cxt['job_id']
         cache_type = cxt['cache_type']
         data_key_in_list = data_key.split('.')
 
-        data_file_name = os.path.join(self.roam_path, task_id,
+        data_file_name = os.path.join(self.roam_path, job_id,
                                       'after', 'data',
                                       '.'.join(data_key_in_list[1:-1]))
         if (cache_type == 'redis'): 
@@ -169,11 +163,11 @@ class Downloader(Operator, Singleton):
             raise ValueError('could not recognise cache_type: %s' % cache_type)  
         
         
-        task_logger.info("task[%s]: downloading file %s done" % (task_id, data_key))
+        today_logger.info("task[%s]: downloading file %s done" % (job_id, data_key))
 
         cxt['data_file_name'] = data_file_name
         cxt['index_list'] = '_'.join(data_key_in_list[1].split('_')[1:])
-        cxt['return_file_path'] = os.path.join(self.roam_path, task_id,
+        cxt['return_file_path'] = os.path.join(self.roam_path, job_id,
                                                "after", "return")
         return cxt
 
@@ -195,9 +189,12 @@ class Slicer(Operator, Singleton):
             return os.listdir(os.getcwd())
 
     def slice(self, cxt):
-        task_id = self.generate_task_id()
-        task_logger.info("task[%s]: slicing file %s done" % (task_id, cxt['input_file_path']))
-        with roam.RoamCxt(self.roam_path, given_dir=task_id,
+        if ('job_id' in cxt.keys()):
+            job_id = cxt['job_id']
+        else :
+            job_id = self.generate_task_id()
+        today_logger.info("job[%s]: slicing file %s done" % (job_id, cxt['input_file_path']))
+        with roam.RoamCxt(self.roam_path, given_dir=job_id,
                           generate_hash_dir=True, del_roam_data=False):
             os.mkdir('before')
             os.mkdir('after')
@@ -211,14 +208,12 @@ class Slicer(Operator, Singleton):
             os.chdir(os.path.pardir)
 
             # generate params for uploader
-            slicer_cxt = map(
-                lambda segment: {
-                    'filters': cxt['filters'],
-                    'cache_type': cxt['cache_type'],
-                    'is_local':cxt['is_local'],
-                    'task_id': task_id,
-                    'segment_file_name': segment},
-                segments)
+            slicer_cxt=[]
+            for segment in segments:
+                one_slicer_cxt = copy.deepcopy(cxt)
+                one_slicer_cxt['job_id'] = job_id
+                one_slicer_cxt['segment_file_name'] = segment
+                slicer_cxt.append(one_slicer_cxt)
 
             return slicer_cxt
 
@@ -230,7 +225,7 @@ class Merger(Operator):
     def _index_of_segment(self, segment_file_name):
         return int(segment_file_name.split('_')[0][7:])
 
-    def _execute_mp4box(self, output_file_path, task_id, index_list, slicer_nums):
+    def _execute_mp4box(self, output_file_path, job_id, index_list, slicer_nums):
         all_return_segments = os.listdir(os.getcwd())
         segments = []
         reobj = re.compile('segment[0-9]+_'+index_list+'\.[a-zA-Z0-9]+')
@@ -252,16 +247,16 @@ class Merger(Operator):
 
     def merge(self, cxt):
         output_file_path = cxt['output_file_path']
-        task_id = cxt['task_id']
+        job_id = cxt['job_id']
         slicer_nums = cxt['slicer_nums']
         index_list = cxt['index_list']
         
-        task_logger.info("task[%s_%s]: merging file." % (task_id,index_list))
-        with roam.RoamCxt(root_path=os.path.join(self.roam_path, task_id,'after','data'),
+        today_logger.info("task[%s_%s]: merging file." % (job_id,index_list))
+        with roam.RoamCxt(root_path=os.path.join(self.roam_path, job_id,'after','data'),
                           given_dir=None,
                           generate_hash_dir=False,
                           del_roam_data=False):
-            self._execute_mp4box(output_file_path, task_id, index_list, slicer_nums)
+            self._execute_mp4box(output_file_path, job_id, index_list, slicer_nums)
 
 class Loader(Operator, Singleton):
 
@@ -274,10 +269,13 @@ class Loader(Operator, Singleton):
         context: json-serialized job description
         return: json-serialized context, for subsequent processing
         """
-        task_id = self.generate_task_id()
-        task_logger.info("task[%s]: loading file %s" % (task_id, cxt['input_file_path']))
+        if ('job_id' in cxt.keys()):
+            job_id = cxt['job_id']
+        else :
+            job_id = self.generate_task_id()
+        today_logger.info("task[%s]: loading file %s" % (job_id, cxt['input_file_path']))
         with roam.RoamCxt(self.roam_path,
-                          given_dir=task_id,
+                          given_dir=job_id,
                           generate_hash_dir=True,
                           del_roam_data=False) as roam_cxt:
             os.mkdir('before')
@@ -286,18 +284,16 @@ class Loader(Operator, Singleton):
             os.mkdir('data')
             os.mkdir('return')
             os.chdir(os.path.pardir)
-            
-            cxt['task_id'] = task_id
 
             src_file = cxt['input_file_path']
             dst_file = os.path.join(self.roam_path, roam_cxt.roam_path,
                                     "before", "segment.mp4")
-            task_logger.info("copying file %s to %s" % (src_file, dst_file))
+            today_logger.info("copying file %s to %s" % (src_file, dst_file))
             try:
                 shutil.copyfile(src_file, dst_file)
             except Exception as e:
                 raise IOError("file loading error: %s" % str(e))
-
+            cxt['job_id'] = job_id
             cxt['segment_file_name'] = 'segment.mp4'
             return cxt
         
@@ -309,11 +305,11 @@ class Backer(Operator, Singleton):
     def back(self, cxt):
         data_file_name = cxt['data_file_name']
         output_file_path = cxt['output_file_path']
-        task_id = cxt['task_id']
+        job_id = cxt['job_id']
         
         shutil.move(data_file_name, output_file_path)
-        task_logger.info("Backer: Move output file %s ..." %
-              (os.path.join(self.roam_path, task_id)))
+        today_logger.info("Backer: Move output file %s ..." %
+              (os.path.join(self.roam_path, job_id)))
         return cxt
         
 class Deleter(Operator, Singleton):
@@ -322,28 +318,28 @@ class Deleter(Operator, Singleton):
         
     def redis_del(self, *key):
         for one_key in key:   
-            task_logger.info("redis delete %s."%one_key)
+            today_logger.info("redis delete %s."%one_key)
         return self.redis_connection.delete(*key)
     
     def redis_keys(self, patten):
         return self.redis_connection.keys(patten)
     
     def ftp_del(self, key):
-        task_logger.info("redis delete %s"%key)
+        today_logger.info("redis delete %s"%key)
         self.ftp_connection.login()
         return self.ftp_connection.delete_file(key)
 
     def delete_cache(self, cxt):
-        task_id = cxt['task_id']
+        job_id = cxt['job_id']
         cache_type = cxt['cache_type']
         
-        shutil.rmtree(os.path.join(self.roam_path, task_id))
+        shutil.rmtree(os.path.join(self.roam_path, job_id))
         if (cache_type == 'redis'): 
-            self.redis_del(*self.redis_keys(task_id+'*'))
+            self.redis_del(*self.redis_keys(job_id+'*'))
         elif (cache_type == 'ftp'):
             self.ftp_connection.login()
             del_list = self.ftp_connection.list_file('cache')
-            reobj = re.compile(task_id+'.*?')
+            reobj = re.compile(job_id+'.*?')
             for del_file in del_list:   
                 if reobj.match(del_file):
                     self.ftp_del('cache/'+del_file)
