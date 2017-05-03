@@ -199,9 +199,11 @@ class SimpleTranscoder(FilterBase):
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
                                     universal_newlines=True)
+        task_logger = TaskLogger(task_id)
         while True:
             line = process.stdout.readline()
             statetool.add_ffmpeg_state_to_redis(task_id,line)
+            task_logger.debug(line)
             if not line:
                 break
         statetool.add_ffmpeg_state_to_redis(task_id,'all_complete\n')
