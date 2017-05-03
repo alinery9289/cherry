@@ -102,7 +102,7 @@ def launch_intact_job(context):
             one_res['index_series'] = i
             task = task_dict[one_filter.keys()[0]].delay(one_res)
             subtasks_id.append(task.id)
-              
+        flag =True;
         while subtasks_id:
     #         del_list = []
             for one_id in subtasks_id:
@@ -126,9 +126,13 @@ def launch_intact_job(context):
                     subtasks_id.remove(one_id)
                 elif subtasks_id_result.failed():
                     print "error"
+                    flag =False;
                     subtasks_id.remove(one_id)    
             time.sleep(1)
-        update_processlog_by_job_id(res['job_id'],'succeed')
+        if flag:
+            update_processlog_by_job_id(res['job_id'],'succeed')
+        else :
+            update_processlog_by_job_id(res['job_id'],'failed')
     except Exception,e:
         raise IOError("error: %s" % str(e))
     finally:
