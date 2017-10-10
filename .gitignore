@@ -1,8 +1,10 @@
 *.pyc
 .venv
-
+*.prefs
 #eclipse setting files
-.settings
+.settings*
+.project
+.pydevproject
 
 # ctags files
 tags
