@@ -32,8 +32,9 @@ def add_ffmpeg_state_to_redis(taskid, line):
 		if reobj.match(line):	
 			present = line.find('time')
 			process_now_list = line[int(present)+5:int(present)+15].split(':')
-			process_now_time = (float(process_now_list[0])*3600+float(process_now_list[1])*60+float(process_now_list[2]))
-			dic[process_step] = 'Transcoding :' + str(line[:-1]) + ' schedule: %0.1f %% ...'% (float(process_now_time/process_total_time)*100)
+			if (len(process_now_list)==3):
+				process_now_time = (float(process_now_list[0])*3600+float(process_now_list[1])*60+float(process_now_list[2]))
+				dic[process_step] = 'Transcoding :' + str(line[:-1]) + ' schedule: %0.1f %% ...'% (float(process_now_time/process_total_time)*100)
 			
 	elif process_step == 'all_complete':
 		pass
